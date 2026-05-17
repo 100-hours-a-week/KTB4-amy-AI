@@ -38,7 +38,12 @@ async def countdown_break(sec):
     await tmp.wait()
 
 # 입력
-parse = argparse.ArgumentParser(prog= 'Pomodoro')
+parse = argparse.ArgumentParser(prog= 'Pomodoro',
+                                usage= '$(prog)s',
+                                description= '''뽀모도로 프로그램, -on : 반복횟수, -time : 25/5 or 50/5 입력하여 작동 
+ex. pomodoro.py -on 4 -time 25/5''', #줄바꿈이 -time 앞에 들어갔?는? 들여쓰기 하니까 사라진??
+                                epilog= '문의사항: kimSR0916@gmail.com',
+                                formatter_class= argparse.RawDescriptionHelpFormatter) # rawdescriptionfelpformatter를 해주지 않으면 형식이 살지 않음 잊지 말기
 parse.add_argument('-on', type = int)
 parse.add_argument('-time', choices= ['25/5', '50/15'])
 # TODO: 중도 정지 기능 추가하면 초 합산해서 출력하는 기능 추가하기
