@@ -56,8 +56,8 @@ pomodoro_time = args.time
 
 for i in range(pomodoro_on):
     if (pomodoro_time == '25/5'):
-        asyncio.run(countdown_work(25))
-        asyncio.run(countdown_break(5))
+        asyncio.run(countdown_work(25 * 60))
+        asyncio.run(countdown_break(5 * 60))
     else:
         asyncio.run(countdown_work(50 * 60))
         asyncio.run(countdown_break(15 * 60))
