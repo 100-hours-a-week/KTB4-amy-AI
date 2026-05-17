@@ -1,11 +1,11 @@
 import argparse
 import asyncio
-import sys
-
 
 #타이머 함수
 async def countdown_work(sec):
     print('Working time!')
+
+    #FIXME: 9? 가 붙음 (왜???) - 예외 처리 삭제하니까 이 현상 사리짐 (진짜 왜??)
     while sec > 0:
         sec -= 1
         minute = sec // 60
@@ -22,6 +22,7 @@ async def countdown_work(sec):
 
 async def countdown_break(sec):
     print('Break time!')
+
     while sec > 0:
         sec -= 1
         minute = sec // 60
