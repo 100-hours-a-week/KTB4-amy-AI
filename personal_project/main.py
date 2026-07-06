@@ -1,6 +1,6 @@
 import os
 #환경변수 받아오기
-EMBEDED = os.environ.get("EMBEDED")
+EMBEDDED = os.environ.get("EMBEDED")
 FILEPATH = os.environ.get("FILEPATH")
 CHUNK_SIZE = os.environ.get("CHUNK_SIZE")
 CHUNK_OVERLAP = os.environ.get("CHUNK_OVERLAP")
@@ -30,7 +30,7 @@ import uvicorn
 #임베딩 - 구글 api 소모 속도가 생각보다 빨라서 임시로 허깅 페이스 사용 중
 #FIXME : 구글 임베딩으로 변경하기
 embeddings = HuggingFaceEmbeddings(
-    model_name=EMBEDED,
+    model_name=EMBEDDED,
     encode_kwargs={"prompt": "passage: ", "normalize_embeddings": True},
     query_encode_kwargs={"prompt": "query: ", "normalize_embeddings": True},
 )
