@@ -21,3 +21,8 @@ def ask(req: AskRequest):
     answer = rag_chain.invoke(req.question)
     return AskResponse(answer=answer)
 
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+
