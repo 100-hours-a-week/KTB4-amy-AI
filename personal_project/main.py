@@ -2,6 +2,8 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 
+from personal_project.baseline import rag_chain
+
 app = FastAPI(title="강의자료 검색")
 
 class AskRequest(BaseModel):
