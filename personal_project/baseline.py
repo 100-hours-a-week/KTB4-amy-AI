@@ -100,15 +100,14 @@ rag_chain = (
     | StrOutputParser()
 )
 
-#테스트
-test_q = "니체가 말하는 삶이 뭐야?"
-print("Q:", test_q)
-print("A:", rag_chain.invoke(test_q))
-
-#실패 테스트
-test_q = "이해가 안됐어 디오니소스라니?"
-print("Q:", test_q)
-print("A:", rag_chain.invoke(test_q))
+# #테스트
+# test_q = "니체가 말하는 삶이 뭐야?"
+# print("Q:", test_q)
+# print("A:", rag_chain.invoke(test_q))
+#
+# test_q = "이해가 안됐어 디오니소스라니?"
+# print("Q:", test_q)
+# print("A:", rag_chain.invoke(test_q))
 
 
 # 평가 되는거 확인 완료, api 사용 한도 때문에 잠시 주석 처리 (fastapi 확인해야함,,)
