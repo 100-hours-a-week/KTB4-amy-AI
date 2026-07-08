@@ -86,7 +86,7 @@
   - 2b. 웹검색을 진행하여 부족한 근거를 채워 대답한다.
 
 ### 3.4 유스케이스 다이어그램
-![img.png](usecase_detailed-2%20(1).jpg)
+![img.png](img/usecase_detailed-2%20(1).jpg)
 ```
 [학습자] ─── UC-01 문서 업로드
         ─── UC-02 학습 계획 수립 요청
