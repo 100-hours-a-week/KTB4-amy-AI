@@ -13,13 +13,13 @@
         - 사용자에 대한 개념 설명 이후 사용자는 퀴즈를 통해 학습 여부를 확인 가능하다
         - llm은 소크라테스의 학습 방식(문답을 통하여 정답을 이끌어내기)을 차용하여 학습자가 주체적으로 사유하도록 한다
     - 관련 사례 분석 : Notebook LM, 말해보카, 듀오링고
-  ![img](img.png) ![img](img_1.png) ![img](img_2.png) ![img](img_3.png)
+  ![img](img/img.png) ![img](img/img_1.png) ![img](img/img_2.png) ![img](img/img_3.png)
 
 - 개발 프로그램: 웹 (FastAPI 기반 백엔드로 배포 예정, 프론트엔드는 미정)
 - 알림 방식: 푸시/메일 없음. 사용자 접속 시점 기준으로 지연 등을 안내
 - 핵심 설계 원칙: **트리거는 코드, 내용 생성은 LLM.**
   단, "설명 완료 여부 판단"은 자연어 흐름 판단이므로 유일하게 LLM이 트리거를 겸한다.
-![img](mvc_component-2.drawio.png)
+![img](img/mvc_component-2.drawio.png)
 
 ---
 
@@ -101,7 +101,7 @@
 ---
 
 ## 4. ERD
-![img](erd.png)
+![img](img/erd.png)
 ### 4.1 엔터티 정의
 
 **users** — 사용자 계정 (NFR-02 근거)
@@ -214,7 +214,7 @@ PDF 업로드 → 챕터 분할(LLM) → chapters 저장(RDB)
 
 
 ### 관계 요약
-![img](uml_class.drawio.png)
+![img](img/uml_class.drawio.png)
 ```
 users 1 ──── N documents
 documents 1 ──── N chapters
