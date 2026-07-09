@@ -3,6 +3,8 @@ import os
 
 from langchain_classic.schema import embeddings
 
+from personal_project.prompt import prompt
+
 #환경변수 받아오기
 EMBEDDED = os.environ.get("EMBEDED")
 FILEPATH = os.environ.get("FILEPATH")
@@ -15,7 +17,7 @@ os.environ["LANGSMITH_TRACING_V2"] = "true"
 os.environ["LANGSMITH_API_KEY"] = os.environ.get("lang_smith")
 os.environ["LANGSMITH_ENDPOINT"] = "https://api.smith.langchain.com"
 os.environ["LANGSMITH_PROJECT"] = "personal_project"
-os.environ["GOOGLE_API_KEY"] = os.environ.get("google_api_key2")
+os.environ["GOOGLE_API_KEY"] = os.environ.get("google_api_key")
 
 #import
 from langchain_community.document_loaders import PyMuPDFLoader
@@ -75,20 +77,6 @@ else: #벡터디비가 이미 존재하면 호출을 해주도록 하자
 retriever = vectorstore.as_retriever(search_kwargs={"k": TOP_K})
 llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0, max_retries = 0)
 
-prompt = ChatPromptTemplate.from_messages([
-    ("system",
-     "당신은 교육자 입니다. 주어진 문서에 근거하여 질문에 답해주세요\n"
-     "당신의 최우선 사항은 사용자의 이해입니다.\n"
-     "사용자의 질문이 문제풀이와 같은 정답을 요구하는것일 경우 정답을 절대로 알려주어선 안됩니다. 정답쪽으로 유도하여야 합니다.\n"
-     "사용자가 내용을 이해됐다 파악되면 설명한 개념에 대한 요약을 해주세요. 새롭게 익힌것, 헷갈린것들 위주로 작성해야합니다.\n"
-     "자료에 없는 내용 일 경우 자료에서 찾을 수 없습니다 라고 대답합니다.\n"
-     "설명이 끝난 이후에는 사용자가 내용을 파악했는지 내용에 점검하는 과정을 가지세요 설명은 사용자가 이해할때까지 계속되어야 합니다\n"
-     ),
-    ("human",
-     "문서 : {context}\n\n"
-     "질문 : {question}"
-     )
-])
 
 def format_docs(docs):
     return "\n\n".join(d.page_content for d in docs)
