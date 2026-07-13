@@ -26,7 +26,6 @@ class MyState(TypedDict): #typeddict == 형식지정
 def initialize(state : MyState) -> dict:
   search_query = state['question']
   retry_count = 0
-  search_state = 0
   return {"search_query" : search_query, "retry_count" : retry_count}
 
 #점수 꺼내서 메타 데이터에 넣기
@@ -53,7 +52,7 @@ def evaluate(state : MyState) -> dict:
 #분기 - 오류 여부 판단
 def router(state : MyState) -> str:
   print(state['retry_count'])
-  if state['retry_count'] < 2 and state['similarity_average'] >= 0.3: # 아미친 거리인거 까먹지 말기!!! 부등호 방향 반대될뻔...
+  if state['retry_count'] < 2 and state['similarity_average'] >= 0.3: # 거리인거 까먹지 말기!!! 부등호 방향 반대될뻔...
     if state['retry_count'] == 0:
       return "ask"
     else:
@@ -123,7 +122,7 @@ builder.add_edge("search", "evaluate")
 builder.add_conditional_edges(
   "evaluate",
   router,
-  {"ask" : "ask", "learn" : "learn", "fail" : "fail"},
+  {"ask" : "ask", "learn" : "learn", "fail" : "fail", "retry" : "retry"},
 )
 builder.add_conditional_edges(
   "ask",
@@ -136,5 +135,3 @@ builder.add_edge("learn", END)
 builder.add_edge("fail", END)
 
 graph = builder.compile(checkpointer= MemorySaver())
-result = graph.invoke({"question": "랭그래프가 뭐야", "answer": ""})
-print(result)
