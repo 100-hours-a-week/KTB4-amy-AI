@@ -13,13 +13,16 @@ class AskRequest(BaseModel):
 class AskResponse(BaseModel):
     answer : str
 
+class Thread_id(BaseModel):
+    thread_id : int
+
 @app.get("/")
 def root():
   return {"status" : "ok", "message" : "connect"}
 
 @app.post("/ask", response_model=AskResponse)
-def ask(req: AskRequest):
-    result = graph.invoke({"question" : req.question})
+def ask(req: AskRequest, thr : Thread_id):
+    result = graph.invoke({"question" : req.question, "thread_id" : thr.thread_id})
     return AskResponse(answer=result['answer']) #그래프 전체값을 반환해버리므로 answer 만 추출하여준다
 
 if __name__ == "__main__":

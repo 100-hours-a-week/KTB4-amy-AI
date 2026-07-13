@@ -1,8 +1,11 @@
 # 랭그래프 마이그레이션
 #import
+from duckduckgo_search import DDGS
 from langchain_core.output_parsers import StrOutputParser
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import StateGraph, START, END
 from langgraph.types import interrupt
+from pydantic_settings.sources.providers import toml
 from typing_extensions import TypedDict
 from typing import List
 from langchain_core.documents import Document
@@ -24,7 +27,7 @@ def initialize(state : MyState) -> dict:
   search_query = state['question']
   retry_count = 0
   search_state = 0
-  return {"search_query" : search_query, "retry_count" : retry_count, "search_state" : search_state}
+  return {"search_query" : search_query, "retry_count" : retry_count}
 
 #점수 꺼내서 메타 데이터에 넣기
 def search(state: MyState) -> dict:
@@ -75,7 +78,14 @@ def ask_router(state : MyState) -> str:
   else:
     return "web_search"
 
+#context에 document 들어있으니까 그거 받아와서 metadata에 title이랑  href 넣어주고 page_content에 본문 내용 넣어주고 context 값 재 반환 하기?
+#덮어쓰기가 되니까 변수에 내용 혼용으로 들어가는건 걱정 안해도 될듯
 def web_search(state : MyState) -> dict:
+  tmp = DDGS().text(state['search_query'], max_results = 3)
+  web_list = []
+  for doc in tmp:
+    web_list.append(Document(page_content=doc['body'], metadata = {"title" : doc['title'], "href" : doc['href']}))
+  return {"context" : web_list}
 
 
 #시도 횟수 세주기, search_query 내용 바꿔주기(최대 시도 횟수 제한 및 재검색 용)
@@ -104,6 +114,8 @@ builder.add_node("initialize", initialize)
 builder.add_node("retry", retry)
 builder.add_node("evaluate", evaluate)
 builder.add_node("fail", fail)
+builder.add_node("web_search", web_search)
+builder.add_node("ask", ask)
 
 builder.add_edge(START, "initialize")
 builder.add_edge("initialize", "search")
@@ -111,12 +123,18 @@ builder.add_edge("search", "evaluate")
 builder.add_conditional_edges(
   "evaluate",
   router,
-  {"retry" : "retry", "learn" : "learn", "fail" : "fail"},
+  {"ask" : "ask", "learn" : "learn", "fail" : "fail"},
+)
+builder.add_conditional_edges(
+  "ask",
+  ask_router,
+  {"retry" : "retry", "web_search" : "web_search"}
 )
 builder.add_edge("retry", "search")
+builder.add_edge("web_search", "learn")
 builder.add_edge("learn", END)
 builder.add_edge("fail", END)
 
-graph = builder.compile()
+graph = builder.compile(checkpointer= MemorySaver())
 result = graph.invoke({"question": "랭그래프가 뭐야", "answer": ""})
 print(result)
