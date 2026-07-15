@@ -17,7 +17,7 @@ prompt = ChatPromptTemplate.from_messages([
 
 prompt_replace = ChatPromptTemplate.from_messages([
     ("system",
-     "현재 질문을 넣고 llm 을 돌려 나온 값이 만족스헙지 못했습니다. \n"
+     "현재 질문을 넣고 llm 을 돌려 나온 값이 만족스럽지 못했습니다. \n"
      "원래 질문의 의도를 해치지 않고 새로운 질문을 짜주세요 \n"
      "결과와 같은 값이 나와서는 안됩니다\n"
      "출력은 설명 없이 다시 쓴 질문 한 문장만 출력해야 합니다"
@@ -26,5 +26,19 @@ prompt_replace = ChatPromptTemplate.from_messages([
      "결과 : {result}\n\n"
      "원래 질문 : {question}\n\n"
      "현재 질문 : {search_query}"
+    )
+])
+
+toc_prompt = ChatPromptTemplate.from_messages([
+    ("system",
+     "현재 문서의 목차를 작성하고 있는 중입니다\n"
+     "이 목록은 pdf 에서 추출한 목차입니다. 자동 생성으로 인하여 의미없는 값도 들어가있습니다. \n"
+     "주어진 값 중 목차로 추정되는것만 골라 계층 정리를 해주세요 ex. 1 생애와 개관 1-1 니체의 탄생\n"
+     "level은 1과 2만 넣어주세요 메인 챕터와 서브 챕터로만 나누는 겁니다. \n"
+     "문서의 메타정보(ex. 문서 전체 제목, 부제, 저자, 날짜)와 같은건 필요 없습니다\n"
+     "페이지 번호는 원본의 번호를 따라주세요."
+     ),
+    ("human",
+     "값 : {toc_list}\n\n"
     )
 ])

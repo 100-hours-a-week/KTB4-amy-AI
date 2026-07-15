@@ -5,7 +5,6 @@ from langchain_core.output_parsers import StrOutputParser
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import StateGraph, START, END
 from langgraph.types import interrupt
-from pydantic_settings.sources.providers import toml
 from typing_extensions import TypedDict
 from typing import List
 from langchain_core.documents import Document
@@ -85,7 +84,6 @@ def web_search(state : MyState) -> dict:
   for doc in tmp:
     web_list.append(Document(page_content=doc['body'], metadata = {"title" : doc['title'], "href" : doc['href']}))
   return {"context" : web_list}
-
 
 #시도 횟수 세주기, search_query 내용 바꿔주기(최대 시도 횟수 제한 및 재검색 용)
 def retry(state : MyState) -> dict:
