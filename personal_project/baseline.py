@@ -1,7 +1,7 @@
 #문서로딩, 인덱싱 등 그래프 데이터 전처리 및 프롬프트 입력
 import os
-
-from langchain_classic.schema import embeddings
+import re
+import unicodedata
 
 from personal_project.prompt import prompt
 
@@ -27,11 +27,7 @@ from langchain_community.vectorstores import Chroma
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
-from langsmith import Client
-from langsmith.evaluation import evaluate
-
 
 #임베딩 - 구글 api 소모 속도가 생각보다 빨라서 임시로 허깅 페이스 사용 중
 #FIXME : 구글 임베딩으로 변경하기
@@ -41,17 +37,33 @@ embeddings = HuggingFaceEmbeddings(
     query_encode_kwargs={"prompt": "query: ", "normalize_embeddings": True},
 )
 
-#문서 로드 및 청킹
+#문서 로드
 all_docs = []
 if os.path.exists(FILEPATH):
     loader = PyMuPDFLoader(FILEPATH)
     all_docs.extend(loader.load())
 
+#전처리 함수
+def preprocess_text(text):
+    text = unicodedata.normalize("NFKC", text) # 아니 특수문자 정규화해서 제거하려고 했는데 이걸로 \uf07d가 안없어짐!!!
+    text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f\xad]", "", text) #특수문자 제거용
+    text = re.sub(r"[ \t]+", " ", text) # 공백 통일용
+    text = re.sub(r"\n{3,}", "\n\n", text) #줄넘김 통일용
+    text = re.sub(r"[\uE000-\uF8FF]", "", text) #그래서 이걸로 없애줬어요
+    return text.strip()
+
+cleaned_docs = []
+for i in all_docs:
+    text = i.page_content
+
+    if text:
+        cleaned_docs.append(text)
+
 splitter = RecursiveCharacterTextSplitter(
     chunk_size = CHUNK_SIZE,
     chunk_overlap = CHUNK_OVERLAP,
 )
-chunks = splitter.split_documents(all_docs)
+chunks = splitter.split_documents(cleaned_docs)
 
 print(f"{chunks[0].page_content[:80]}...")
 
