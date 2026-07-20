@@ -3,7 +3,8 @@ import os
 import re
 import unicodedata
 
-from personal_project.prompt import prompt
+from pydantic import BaseModel, Field
+from personal_project.prompt import prompt, toc_prompt
 
 #환경변수 받아오기
 EMBEDDED = os.environ.get("EMBEDED")
@@ -29,6 +30,14 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 
+#서브 챕터 생성 - 형식 지정
+class Chapter(BaseModel):
+    level : int = Field(description="계층. 1이면 대챕터, 2면 세부 챕터")
+    title : str
+
+class Outline(BaseModel):
+    chapters : list[Chapter]
+
 #임베딩 - 구글 api 소모 속도가 생각보다 빨라서 임시로 허깅 페이스 사용 중
 #FIXME : 구글 임베딩으로 변경하기
 embeddings = HuggingFaceEmbeddings(
@@ -52,13 +61,24 @@ def preprocess_text(text):
     text = re.sub(r"[\uE000-\uF8FF]", "", text) #그래서 이걸로 없애줬어요
     return text.strip()
 
+#문서 로드 및 전처리
 cleaned_docs = []
 for i in all_docs:
     text = i.page_content
 
     if text:
+        text = preprocess_text(text)
         cleaned_docs.append(text)
 
+#서브챕터 - 랭체인
+toc_llm = ChatGoogleGenerativeAI(model = "gemini-2.5-flash", temperature = 0, max_retries = 0, api_key = os.environ.get("google_api_key2"))
+toc_structure = toc_llm.with_structured_output(Outline)
+toc_chain = toc_prompt | toc_structure
+res = toc_chain.invoke({"toc_list" : cleaned_docs})
+
+print(res)
+
+#청킹
 splitter = RecursiveCharacterTextSplitter(
     chunk_size = CHUNK_SIZE,
     chunk_overlap = CHUNK_OVERLAP,
@@ -83,12 +103,11 @@ else: #벡터디비가 이미 존재하면 호출을 해주도록 하자
       embedding_function = embeddings
   )
 
-#체인
+#RAG 체인
 #HACK : 왜인지는 모르겠는데 llm이 성공적으로 호출되어도 계속 호출하는 현상이 있어서 최대 호출횟수 지정해서 해결 하였음
 #NOTE : 아니 근데 출력 결과 너무 맘에 안드는데 맘에 드는 결과 나올때까지 작성하자니 프롬프트 너무 길어질것 같고
 retriever = vectorstore.as_retriever(search_kwargs={"k": TOP_K})
 llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0, max_retries = 0)
-
 
 def format_docs(docs):
     return "\n\n".join(d.page_content for d in docs)
@@ -99,6 +118,7 @@ rag_chain = (
     | llm
     | StrOutputParser()
 )
+
 
 # #테스트
 # test_q = "니체가 말하는 삶이 뭐야?"
