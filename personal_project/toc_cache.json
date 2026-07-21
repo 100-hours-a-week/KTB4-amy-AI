@@ -1,0 +1,221 @@
+{
+  "chapters": [
+    {
+      "level": 1,
+      "title": "생애와개관",
+      "start_index": 1,
+      "parent": "",
+      "last_index": 9
+    },
+    {
+      "level": 2,
+      "title": "생애- 니체(Friedrich Nietzsche, 1844~1900)",
+      "start_index": 1,
+      "parent": "생애와개관",
+      "last_index": 7
+    },
+    {
+      "level": 2,
+      "title": "개관",
+      "start_index": 8,
+      "parent": "생애와개관",
+      "last_index": 9
+    },
+    {
+      "level": 1,
+      "title": "관점주의",
+      "start_index": 10,
+      "parent": "",
+      "last_index": 24
+    },
+    {
+      "level": 2,
+      "title": "본질과가치",
+      "start_index": 10,
+      "parent": "관점주의",
+      "last_index": 11
+    },
+    {
+      "level": 2,
+      "title": "최고가치로서삶또는생명",
+      "start_index": 12,
+      "parent": "관점주의",
+      "last_index": 12
+    },
+    {
+      "level": 2,
+      "title": "삶과해석",
+      "start_index": 13,
+      "parent": "관점주의",
+      "last_index": 15
+    },
+    {
+      "level": 2,
+      "title": "관점주의(perspectivism)",
+      "start_index": 16,
+      "parent": "관점주의",
+      "last_index": 19
+    },
+    {
+      "level": 2,
+      "title": "관점주의심화",
+      "start_index": 20,
+      "parent": "관점주의",
+      "last_index": 24
+    },
+    {
+      "level": 1,
+      "title": "전통적세계해석에대한비판",
+      "start_index": 25,
+      "parent": "",
+      "last_index": 42
+    },
+    {
+      "level": 2,
+      "title": "전통적세계해석의특징",
+      "start_index": 25,
+      "parent": "전통적세계해석에대한비판",
+      "last_index": 34
+    },
+    {
+      "level": 3,
+      "title": "동굴의비유",
+      "start_index": 28,
+      "parent": "전통적세계해석의특징",
+      "last_index": 30
+    },
+    {
+      "level": 3,
+      "title": "진리와 이원론적 세계관",
+      "start_index": 31,
+      "parent": "전통적세계해석의특징",
+      "last_index": 34
+    },
+    {
+      "level": 2,
+      "title": "전통적 세계해석의 문제점",
+      "start_index": 35,
+      "parent": "전통적세계해석에대한비판",
+      "last_index": 37
+    },
+    {
+      "level": 2,
+      "title": "허구로서 진리의 의지",
+      "start_index": 38,
+      "parent": "전통적세계해석에대한비판",
+      "last_index": 42
+    },
+    {
+      "level": 1,
+      "title": "주체개념비판",
+      "start_index": 43,
+      "parent": "",
+      "last_index": 55
+    },
+    {
+      "level": 2,
+      "title": "데카르트식 주체 개념 비판",
+      "start_index": 43,
+      "parent": "주체개념비판",
+      "last_index": 49
+    },
+    {
+      "level": 2,
+      "title": "‘나’는 살아 있는 몸이다– 신체의 재발견",
+      "start_index": 50,
+      "parent": "주체개념비판",
+      "last_index": 53
+    },
+    {
+      "level": 2,
+      "title": "해석하는 주체로서 살아 있는 몸(Leib)",
+      "start_index": 54,
+      "parent": "주체개념비판",
+      "last_index": 55
+    },
+    {
+      "level": 1,
+      "title": "도덕(선악)의기원과해체",
+      "start_index": 56,
+      "parent": "",
+      "last_index": 66
+    },
+    {
+      "level": 2,
+      "title": "‘신은 죽었다’(Gott ist tot) - 허무주의의 도래",
+      "start_index": 56,
+      "parent": "도덕(선악)의기원과해체",
+      "last_index": 58
+    },
+    {
+      "level": 2,
+      "title": "도덕의 기원에 대한 계보학적 탐구",
+      "start_index": 59,
+      "parent": "도덕(선악)의기원과해체",
+      "last_index": 62
+    },
+    {
+      "level": 2,
+      "title": "노예도덕과 주인도덕",
+      "start_index": 63,
+      "parent": "도덕(선악)의기원과해체",
+      "last_index": 66
+    },
+    {
+      "level": 1,
+      "title": "힘을향한의지",
+      "start_index": 67,
+      "parent": "",
+      "last_index": 76
+    },
+    {
+      "level": 2,
+      "title": "개념의 배경",
+      "start_index": 67,
+      "parent": "힘을향한의지",
+      "last_index": 68
+    },
+    {
+      "level": 2,
+      "title": "존재(Being)와 생성(Becoming)",
+      "start_index": 69,
+      "parent": "힘을향한의지",
+      "last_index": 69
+    },
+    {
+      "level": 2,
+      "title": "힘을 향한 의지 개념의 내용",
+      "start_index": 70,
+      "parent": "힘을향한의지",
+      "last_index": 76
+    },
+    {
+      "level": 1,
+      "title": "영원회귀와위버멘쉬",
+      "start_index": 77,
+      "parent": "",
+      "last_index": 87
+    },
+    {
+      "level": 2,
+      "title": "영원회귀와 ‘비극적 긍정’(운명애, amor fati)",
+      "start_index": 77,
+      "parent": "영원회귀와위버멘쉬",
+      "last_index": 79
+    },
+    {
+      "level": 2,
+      "title": "디오니소스적 유희",
+      "start_index": 80,
+      "parent": "영원회귀와위버멘쉬",
+      "last_index": 83
+    },
+    {
+      "level": 2,
+      "title": "예술가로서 위버멘쉬(overman)",
+      "start_index": 84,
+      "parent": "영원회귀와위버멘쉬",
+      "last_index": 87
+    }
+  ]
+}

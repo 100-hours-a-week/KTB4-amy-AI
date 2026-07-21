@@ -5,6 +5,9 @@ import unicodedata
 
 from pydantic import BaseModel, Field
 from personal_project.prompt import prompt, toc_prompt
+from dotenv import load_dotenv
+
+load_dotenv()
 
 #환경변수 받아오기
 EMBEDDED = os.environ.get("EMBEDED")
@@ -12,6 +15,7 @@ FILEPATH = os.environ.get("FILEPATH")
 CHUNK_SIZE = int(os.environ.get("CHUNK_SIZE"))
 CHUNK_OVERLAP = int(os.environ.get("CHUNK_OVERLAP"))
 DB = os.environ.get("DB")
+db2 = os.environ.get("db2")
 TOP_K = int(os.environ.get("TOP_K"))
 
 os.environ["LANGSMITH_TRACING_V2"] = "true"
@@ -26,14 +30,18 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.documents import Document
 
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 
 #서브 챕터 생성 - 형식 지정
 class Chapter(BaseModel):
-    level : int = Field(description="계층. 1이면 대챕터, 2면 세부 챕터")
+    level : int = Field(description="계층. 1이면 대챕터, 2부터는 세부 챕터")
     title : str
+    start_index : int = Field(description="챕터가 시작하는 리스트의 인덱스, 대챕터의 경우 대챕터에 속한 첫번째 세부 챕터의 start_index와 동일하게 할당한다")
+    parent : str = Field(description="대챕터면 parent는 비워두고 세부 챕터면 소속 대챕터 제목 삽입")
+    last_index : int = Field(description="챕터가 시작하는 마지막 인덱스, 대챕터의 경우 대챕터에 속한 마지막 세부 챕터의 last_index와 동일하게 할당한다")
 
 class Outline(BaseModel):
     chapters : list[Chapter]
@@ -74,16 +82,52 @@ for i in all_docs:
 toc_llm = ChatGoogleGenerativeAI(model = "gemini-2.5-flash", temperature = 0, max_retries = 0, api_key = os.environ.get("google_api_key2"))
 toc_structure = toc_llm.with_structured_output(Outline)
 toc_chain = toc_prompt | toc_structure
-res = toc_chain.invoke({"toc_list" : cleaned_docs})
 
-print(res)
+#개발 중 임시 저장 용
+toc_cache = "toc_cache.json"
+res = None
+
+if os.path.exists(toc_cache):
+    try:
+        with open(toc_cache, encoding="utf-8") as f:
+            res = Outline.model_validate_json(f.read())
+    except:
+        res = None
+if res == None:
+    numbered = "\n\n".join(f"[{i}] {t}" for i, t in enumerate(cleaned_docs))
+    res = toc_chain.invoke({"toc_list": numbered})
+    with open(toc_cache, "w", encoding="utf-8") as f:
+        f.write(res.model_dump_json(indent=2)) #indent : 들여쓰기
+
+chapter_num = 1
+parent_num = 1
+
+docs = []
+tmp = 0
+
+for ch in res.chapters:
+    level = ch.level
+    title = ch.title
+    start_index = ch.start_index
+    last_index = ch.last_index
+    parent = ch.parent
+
+    if level == 1:
+        chapter_num = 1
+    else:
+        for i in range(start_index, last_index + 1, 1):
+            doc = Document(page_content=cleaned_docs[i], metadata = {'title' : title, 'level' : level,  'parent' : parent, 'chapter_index' : chapter_num})
+            docs.append(doc)
+        chapter_num += 1
+
+print(docs)
 
 #청킹
 splitter = RecursiveCharacterTextSplitter(
     chunk_size = CHUNK_SIZE,
     chunk_overlap = CHUNK_OVERLAP,
 )
-chunks = splitter.split_documents(cleaned_docs)
+chunks = splitter.split_documents(docs)
 
 print(f"{chunks[0].page_content[:80]}...")
 
