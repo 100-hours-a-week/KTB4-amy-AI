@@ -12,4 +12,4 @@
 
 ---
 ## wireshark
-![](./Screenshot 2026-07-21 at 8.51.27 PM.png)
+![](https://github.com/100-hours-a-week/KTB4-amy-AI/blob/main/weekly_challenge_10/Screenshot%202026-07-21%20at%208.51.27%E2%80%AFPM.png)
