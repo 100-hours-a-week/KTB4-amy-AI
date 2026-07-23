@@ -51,3 +51,16 @@ last_index는 마지막 서브챕터의 last_index와 같아야 합니다. '''
      "값 : {toc_list}\n\n"
     )
 ])
+
+chapter_prompt = ChatPromptTemplate.from_messages([
+    ("system",
+     '''
+사용자의 질문을 바탕으로 현재 사용자가 설명듣고자 하는 챕터를 찾아주세요.
+챕터의 번호는 document에 메타데이터로 들어가 있으며 챕터의 우선순위는 parent_index , chapter_index 순 입니다
+가령 이전에 챕터에 대한 정보가 없는 상태에서 세번째 챕터부터 설명해줘 하면 parent_index를 변화, 만약 이미 챕터를 물어봤고 사용자가 거기에 추가 답변으로 세번째 챕터를 설명해줘 한 경우 chapter_index 값 변화
+3-2와 같은 입력이 들어온 경우 parent_index는 3, chapter_index는 2가 된다.
+     '''),
+    ('human',
+     "문서 : {context}\n\n"
+     "질문 : {question} \n\n")
+])

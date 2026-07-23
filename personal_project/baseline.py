@@ -47,7 +47,6 @@ class Outline(BaseModel):
     chapters : list[Chapter]
 
 #임베딩 - 구글 api 소모 속도가 생각보다 빨라서 임시로 허깅 페이스 사용 중
-#FIXME : 구글 임베딩으로 변경하기
 embeddings = HuggingFaceEmbeddings(
     model_name=EMBEDDED,
     encode_kwargs={"prompt": "passage: ", "normalize_embeddings": True},
@@ -100,7 +99,7 @@ if res == None:
         f.write(res.model_dump_json(indent=2)) #indent : 들여쓰기
 
 chapter_num = 1
-parent_num = 1
+parent_num = 0
 
 docs = []
 tmp = 0
@@ -114,9 +113,10 @@ for ch in res.chapters:
 
     if level == 1:
         chapter_num = 1
+        parent_num += 1
     else:
         for i in range(start_index, last_index + 1, 1):
-            doc = Document(page_content=cleaned_docs[i], metadata = {'title' : title, 'level' : level,  'parent' : parent, 'chapter_index' : chapter_num})
+            doc = Document(page_content=cleaned_docs[i], metadata = {'title' : title, 'level' : level,  'parent' : parent, 'chapter_index' : chapter_num, 'parent_index' : parent_num})
             docs.append(doc)
         chapter_num += 1
 
@@ -129,7 +129,7 @@ splitter = RecursiveCharacterTextSplitter(
 )
 chunks = splitter.split_documents(docs)
 
-print(f"{chunks[0].page_content[:80]}...")
+print(f"청킹 데이터 : {chunks[0:10]}...")
 
 #db
 #NOTE : db가 없을때만 생성되도록
