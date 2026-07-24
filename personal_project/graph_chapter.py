@@ -27,12 +27,9 @@ def textChapter(state : ChapterState):
     ch = state['chapter_index']
 
     tmp = []
-    num = 0
     for i in chunks:
         if i.metadata['parent_index'] == pr and i.metadata['chapter_index'] == ch:
-            i.metadata['chunk_index'] = num
             tmp.append([i])
-            num += 1
 
     return {'text' : tmp}
 

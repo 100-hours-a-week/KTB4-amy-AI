@@ -128,7 +128,9 @@ splitter = RecursiveCharacterTextSplitter(
 chunks = splitter.split_documents(docs)
 
 #청킹 인덱싱 해주기
-for i in range(1, parent_num):
+n = 1
+for c in chunks:
+    if c.metadata['chapter_index'] == 1 and n == 1:
 
 
 print(f"청킹 데이터 : {chunks[0]}...")
