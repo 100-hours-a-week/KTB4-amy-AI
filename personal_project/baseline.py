@@ -35,7 +35,7 @@ from langchain_core.documents import Document
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 
-#서브 챕터 생성 - 형식 지정
+#서브 챕터 생성 - 형식 지정 (rag 이용하면 너무 대용량 넣는거 해결될듯)
 class Chapter(BaseModel):
     level : int = Field(description="계층. 1이면 대챕터, 2부터는 세부 챕터")
     title : str
@@ -120,8 +120,6 @@ for ch in res.chapters:
             docs.append(doc)
         chapter_num += 1
 
-print(docs)
-
 #청킹
 splitter = RecursiveCharacterTextSplitter(
     chunk_size = CHUNK_SIZE,
@@ -129,7 +127,11 @@ splitter = RecursiveCharacterTextSplitter(
 )
 chunks = splitter.split_documents(docs)
 
-print(f"청킹 데이터 : {chunks[0:10]}...")
+#청킹 인덱싱 해주기
+for i in range(1, parent_num):
+
+
+print(f"청킹 데이터 : {chunks[0]}...")
 
 #db
 #NOTE : db가 없을때만 생성되도록
