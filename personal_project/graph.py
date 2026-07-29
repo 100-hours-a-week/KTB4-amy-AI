@@ -62,7 +62,7 @@ def router(state : MyState) -> str:
     return "learn"
 
 def ask(state : MyState) -> dict:
-  tmp = interrupt("문서에서 내용을 찾을 수 없습니다. 웹 검색으로 전환할까요? (네/아니요)")
+  tmp = interrupt({"stage" : "websearch", "msg" : "문서에서 내용을 찾을 수 없습니다. 웹 검색으로 전환할까요? (네/아니요)"})
   if "아니요" in tmp:
     check = "doc"
   else:

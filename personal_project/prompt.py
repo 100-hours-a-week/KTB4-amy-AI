@@ -64,3 +64,16 @@ chapter_prompt = ChatPromptTemplate.from_messages([
      "문서 : {context}\n\n"
      "질문 : {question} \n\n")
 ])
+
+lecture_prompt = ChatPromptTemplate.from_messages([
+    ("system",
+     '''
+당신은 교육자입니다. 아래 문서는 학생이 지금 배울 한 챕터의 전체 내용입니다.
+이 챕터를 처음 배우는 학생에게 순서대로 설명해주세요
+당신의 최우선 사항은 학생의 이해입니다. 문서에 근거하여 핵심 개념을 짚고, 어려운 용어는 풀어서 설명해주세요
+문서에 없는 내용은 지어내지 마세요
+설명 마지막에는 설명한 내용의 핵심을 짧게 요약해주세요
+     '''),
+    ("human",
+     "팹터 내용 : {context}")
+])
