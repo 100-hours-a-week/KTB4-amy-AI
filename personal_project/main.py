@@ -16,11 +16,20 @@ class AskResponse(BaseModel):
     answer : str | None = None
     status : str
     thread_id : str
-    question : str | None = None
+    stage : str | None = None
+    msg : str | None = None
 
 class ResumeRequest(BaseModel):
     thread_id : str
-    interrupt_answer : str
+    reply : str
+
+def build_response(result, thread_id) -> AskResponse:
+    if "__interrupt__" in result:
+        v = result["__interrupt__"][0].value
+        return  AskResponse(status="interrupted", thread_id=thread_id,
+                            stage=v["stage"], msg=v["msg"])
+    return AskResponse(status="completed", thread_id=thread_id,
+                       answer=result["answer"])
 
 @app.get("/")
 def root():
