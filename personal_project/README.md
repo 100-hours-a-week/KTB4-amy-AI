@@ -26,6 +26,13 @@
 ## 2. 요구사항명세서
 [구글 스프레드시트 링크](https://docs.google.com/spreadsheets/d/1lVzLVJ5RE_eNoh3Z4Ft2djWiOvUAQN9X9fVOEmemcaI/edit?usp=sharing)
 
+### 2.1 로직
+>> printChapter(청크 출력) → ask("이어서?")\
+   ├ Y → 커서++ → (청크 남으면) printChapter / (챕터 남으면) nextChapter → printChapter
+   └ N → toQA("뭐 궁금?") → qa(답변) → moreQuestion("더?")
+            ├ 더 → toQA (다시 질문받기)
+            └ 끝 → printChapter (커서 위치에서 설명 복귀)
+
 ## 3. 유스케이스 모델
 ### 3.1 액터
 - **학습자(User)** : 인간 액터. 문서 업로드, 수업, 퀴즈, 질문, 계획 관리를 수행.

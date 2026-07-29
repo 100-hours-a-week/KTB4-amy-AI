@@ -69,4 +69,16 @@ def nextChapter(state : ChapterState):
     else:
         return {'parent_index' : p + 1, 'chapter_index' : 1}
 
+def toQA(state : ChapterState):
+    new_question = interrupt({"stage" : "question", "msg" : "무엇이 궁금하신가요?"})
+    return {"question" : new_question}
+
+def moreQuestion(state : ChapterState):
+    reply = interrupt(({"stage" : "more", "msg" : "더 궁금한게 있나요? (Y/N)"}))
+    return {'cont' : reply}
+
+def done(state : ChapterState):
+    return {'answer' : "문서에 대한 설명을 끝마쳤습니다"}
+
+
 
