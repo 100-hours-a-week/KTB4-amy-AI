@@ -27,6 +27,7 @@
 [구글 스프레드시트 링크](https://docs.google.com/spreadsheets/d/1lVzLVJ5RE_eNoh3Z4Ft2djWiOvUAQN9X9fVOEmemcaI/edit?usp=sharing)
 
 ### 2.1 로직
+```
 printChapter(청크 출력) → ask("이어서?")
 ├─ Y → advance 판정
 │      ├─ 청크 남음 → nextChunk(커서++) → printChapter
@@ -35,6 +36,7 @@ printChapter(청크 출력) → ask("이어서?")
 └─ N → toQA("뭐 궁금?") → qa(답변) → moreQuestion("더?")
         ├─ 더 → toQA (다시 질문받기)
         └─ 끝 → advance 판정 (Y와 동일: 다음 청크 / 다음 챕터 / done)
+```
 
 ## 3. 유스케이스 모델
 ### 3.1 액터
