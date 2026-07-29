@@ -2,10 +2,18 @@
 import os
 import re
 import unicodedata
-
 from pydantic import BaseModel, Field
 from personal_project.prompt import prompt, toc_prompt
 from dotenv import load_dotenv
+from collections import defaultdict
+from langchain_community.document_loaders import PyMuPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.vectorstores import Chroma
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.documents import Document
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnablePassthrough
 
 load_dotenv()
 
@@ -23,17 +31,6 @@ os.environ["LANGSMITH_API_KEY"] = os.environ.get("lang_smith")
 os.environ["LANGSMITH_ENDPOINT"] = "https://api.smith.langchain.com"
 os.environ["LANGSMITH_PROJECT"] = "personal_project"
 os.environ["GOOGLE_API_KEY"] = os.environ.get("google_api_key")
-
-#import
-from langchain_community.document_loaders import PyMuPDFLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_community.vectorstores import Chroma
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.documents import Document
-
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnablePassthrough
 
 #서브 챕터 생성 - 형식 지정 (rag 이용하면 너무 대용량 넣는거 해결될듯)
 class Chapter(BaseModel):
@@ -120,6 +117,13 @@ for ch in res.chapters:
             docs.append(doc)
         chapter_num += 1
 
+#챕터 카운트용
+chapter_count = {}
+for d in docs:
+    p = d.metadata['parent_index']
+    c = d.metadata['chapter_index']
+    chapter_count[p] = max(chapter_count.get(p,0), c)
+
 #청킹
 splitter = RecursiveCharacterTextSplitter(
     chunk_size = CHUNK_SIZE,
@@ -128,8 +132,11 @@ splitter = RecursiveCharacterTextSplitter(
 chunks = splitter.split_documents(docs)
 
 #청킹 인덱싱 해주기
-for i in range(1, parent_num):
-
+seq = defaultdict(int)#없는 키를 불러내면 0을 자동 초기화해줌
+for c in chunks:
+    key = (c.metadata['parent_index'], c.metadata['chapter_index'])
+    c.metadata['chunk_index'] = seq[key]
+    seq[key] += 1
 
 print(f"청킹 데이터 : {chunks[0]}...")
 
