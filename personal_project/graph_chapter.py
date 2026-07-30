@@ -1,4 +1,5 @@
-from langchain_core.documents import Document
+import os
+from langchain_anthropic import ChatAnthropic
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langgraph.checkpoint.memory import MemorySaver
@@ -25,6 +26,13 @@ class ChapterState(TypedDict):
     cont : str
     cursor : int
 
+#llm 만들어주기
+model_key = os.environ.get("claude_api_key")
+model_name = os.environ.get("MODEL_C")
+
+lecture_llm = ChatAnthropic(model=model_name, api_key=model_key, max_retries=0)
+lecture_chain = (lecture_prompt | lecture_llm | StrOutputParser())
+
 def format_with_index(docs):
     return "\n\n".join(
         f"[parent_index={d.metadata['parent_index']}, chapter_index = {d.metadata['chapter_index']}]{d.page_content}"
@@ -49,17 +57,19 @@ def textChapter(state : ChapterState):
         {"parent_index" : pr},
         {"chapter_index" : ch},
     ]})
-    print(f"=== 조회 결과 청크 수: {len(tmp['documents'])}")
 
     items = list(zip(tmp['documents'], tmp['metadatas'])) #rawdata를 page_content, metadata 형식으로 묶어주기
     items.sort(key = lambda x : x[1]['chunk_index'])
-    docs = [Document(page_content = c, metadata = m) for c,m in items]
-    return {'text' : docs, 'cursor' : 0} #청크 인덱싱 초기화용
+    context = " ".join(c for c,m in items) #순서에 맞춰 청킹된 텍스트들 합쳐주기
+
+    #챕터 통째로 랭체인에 넣어주기
+    answer = lecture_chain.invoke({'context' : context})
+    result = [p.strip() for p in answer.split('---') if p.strip()]
+
+    return {'text' : result, 'cursor' : 0}
 
 def printChapter(state : ChapterState):
-    string = state['text'][state['cursor']]
-    lecture_chain = (lecture_prompt | llm | StrOutputParser())
-    answer = lecture_chain.invoke({'context' : string.page_content})
+    answer = state['text'][state['cursor']]
     return {'answer' : answer}
 
 def ask(state : ChapterState):
