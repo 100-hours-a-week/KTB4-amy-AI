@@ -12,7 +12,6 @@ from personal_project.baseline import retriever, llm, vectorstore, chapter_count
 from personal_project.graph import builder as qa_builder
 from personal_project.prompt import chapter_prompt, lecture_prompt
 
-
 class Index(BaseModel):
     parent_index : int
     chapter_index : int
@@ -40,6 +39,8 @@ def returnChapter(state : ChapterState):
     return {'parent_index' : result.parent_index, 'chapter_index' : result.chapter_index}
 
 def textChapter(state : ChapterState):
+    #1안 벡터 검색으로 고치기
+    #2안 받는건 챕터별로 받되 출력만 쪼개서 하기(스크리닝?)
     pr = state['parent_index']
     ch = state['chapter_index']
     print(f"=== textChapter 조회: parent_index={pr}, chapter_index={ch}")
@@ -78,7 +79,7 @@ def nextChapter(state : ChapterState):
         return {'parent_index' : p + 1, 'chapter_index' : 1}
 
 def toQA(state : ChapterState):
-    new_question = interrupt({"stage" : "question", "msg" : "무엇이 궁금하신가요?"})
+    new_question = interrupt({"stage" : "question", "msg" : "질문 여부 체크"})
     return {"question" : new_question}
 
 def moreQuestion(state : ChapterState):
@@ -100,6 +101,9 @@ def advance(state: ChapterState) -> str:
         return 'done'
 
     return 'nextChapter'
+
+def clearAnswer(state : ChapterState):
+    return {'answer' : "질문이 있으신가요?"}
 
 #질의응답 여부
 def after_ask(state : ChapterState) -> str:
@@ -132,6 +136,7 @@ builder_chapter.add_node('toQA', toQA)
 builder_chapter.add_node('moreQuestion', moreQuestion)
 builder_chapter.add_node('done', done)
 builder_chapter.add_node('qa', qa_graph) #서브그래프노드
+builder_chapter.add_node('clearAnswer', clearAnswer)
 
 builder_chapter.add_edge(START, 'returnChapter')
 builder_chapter.add_edge('returnChapter', 'textChapter')
@@ -141,12 +146,13 @@ builder_chapter.add_conditional_edges(
     "ask",
     after_ask,
     {
-        'qa' : 'toQA',
+        'qa' : 'clearAnswer',
         'next_chunk' : 'nextChunk',
         'nextChapter' : 'nextChapter',
         'done' : 'done'
     }
 )
+builder_chapter.add_edge('clearAnswer', 'toQA')
 builder_chapter.add_edge('nextChunk', 'printChapter')
 builder_chapter.add_edge('nextChapter', 'textChapter')
 builder_chapter.add_edge('done', END)
@@ -156,7 +162,7 @@ builder_chapter.add_conditional_edges(
     'moreQuestion',
     after_more,
     {
-        'again' : 'toQA',
+        'again' : 'clearAnswer',
         'next_chunk' : 'nextChunk',
         'nextChapter' : 'nextChapter',
         'done' : 'done'

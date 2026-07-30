@@ -17,6 +17,14 @@ from langchain_core.runnables import RunnablePassthrough
 
 load_dotenv()
 
+#llm api keys
+API_KEYS = [
+    os.environ.get("google_api_key"),
+    os.environ.get("google_api_key2"),
+    os.environ.get("google_api_key3"),
+    os.environ.get("google_api_key4"),
+]
+
 #환경변수 받아오기
 EMBEDDED = os.environ.get("EMBEDED")
 FILEPATH = os.environ.get("FILEPATH")
@@ -25,12 +33,12 @@ CHUNK_OVERLAP = int(os.environ.get("CHUNK_OVERLAP"))
 DB = os.environ.get("DB")
 db2 = os.environ.get("db2")
 TOP_K = int(os.environ.get("TOP_K"))
+MODEL_NAME = os.environ.get("MODEL")
 
 os.environ["LANGSMITH_TRACING_V2"] = "true"
 os.environ["LANGSMITH_API_KEY"] = os.environ.get("lang_smith")
 os.environ["LANGSMITH_ENDPOINT"] = "https://api.smith.langchain.com"
 os.environ["LANGSMITH_PROJECT"] = "personal_project"
-os.environ["GOOGLE_API_KEY"] = os.environ.get("google_api_key")
 
 #서브 챕터 생성 - 형식 지정 (rag 이용하면 너무 대용량 넣는거 해결될듯)
 class Chapter(BaseModel):
@@ -43,7 +51,12 @@ class Chapter(BaseModel):
 class Outline(BaseModel):
     chapters : list[Chapter]
 
-#임베딩 - 구글 api 소모 속도가 생각보다 빨라서 임시로 허깅 페이스 사용 중
+#llm 폴백 선언 (api키 활용용)
+def make_llm(api_key):
+    return ChatGoogleGenerativeAI(model=MODEL_NAME, temperature=0, max_retries = 0, api_key = api_key)
+_llm = [make_llm(k) for k in API_KEYS]
+llm = _llm[0].with_fallbacks(_llm[1:])
+
 embeddings = HuggingFaceEmbeddings(
     model_name=EMBEDDED,
     encode_kwargs={"prompt": "passage: ", "normalize_embeddings": True},
@@ -75,8 +88,7 @@ for i in all_docs:
         cleaned_docs.append(text)
 
 #서브챕터 - 랭체인
-toc_llm = ChatGoogleGenerativeAI(model = "gemini-2.5-flash", temperature = 0, max_retries = 0, api_key = os.environ.get("google_api_key2"))
-toc_structure = toc_llm.with_structured_output(Outline)
+toc_structure = llm.with_structured_output(Outline)
 toc_chain = toc_prompt | toc_structure
 
 #개발 중 임시 저장 용
@@ -164,7 +176,6 @@ else: #벡터디비가 이미 존재하면 호출을 해주도록 하자
 #HACK : 왜인지는 모르겠는데 llm이 성공적으로 호출되어도 계속 호출하는 현상이 있어서 최대 호출횟수 지정해서 해결 하였음
 #NOTE : 아니 근데 출력 결과 너무 맘에 안드는데 맘에 드는 결과 나올때까지 작성하자니 프롬프트 너무 길어질것 같고
 retriever = vectorstore.as_retriever(search_kwargs={"k": TOP_K})
-llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0, max_retries = 0)
 
 def format_docs(docs):
     return "\n\n".join(d.page_content for d in docs)
