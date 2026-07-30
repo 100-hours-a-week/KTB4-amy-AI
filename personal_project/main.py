@@ -29,7 +29,7 @@ def build_response(result, thread_id) -> AskResponse:
     if "__interrupt__" in result:
         v = result["__interrupt__"][0].value #보통 결과가 복수일것을 생각해서 리스트로 받아오나 여기선 단일이므로 0번째 값을 받아옴
         return  AskResponse(status="interrupted", thread_id=thread_id,
-                            stage=v["stage"], msg=v["msg"])
+                            stage=v["stage"], msg=v["msg"], answer=result["answer"])
     return AskResponse(status="completed", thread_id=thread_id,
                        answer=result["answer"])
 
@@ -43,8 +43,6 @@ def ask(req: AskRequest):
     result = graph_chapter.invoke({"question" : req.question},
                           config = {"configurable" : {"thread_id" : thread_id}})
 
-    #인터럽트 부분
-    #따옴표 넣을곳 안넣을곳 구분하자!!
     return build_response(result, thread_id)
 
 @app.post("/resume", response_model=AskResponse)
