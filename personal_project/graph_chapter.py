@@ -24,6 +24,7 @@ class ChapterState(TypedDict):
     text : list
     answer : str
     cont : str
+    cursor : int
 
 def format_with_index(docs):
     return "\n\n".join(
@@ -41,11 +42,14 @@ def returnChapter(state : ChapterState):
 def textChapter(state : ChapterState):
     pr = state['parent_index']
     ch = state['chapter_index']
+    print(f"=== textChapter 조회: parent_index={pr}, chapter_index={ch}")
 
     tmp = vectorstore.get(where={"$and" : [ #연산자 시퀄문용 $ == chroma 연산자
         {"parent_index" : pr},
         {"chapter_index" : ch},
     ]})
+    print(f"=== 조회 결과 청크 수: {len(tmp['documents'])}")
+
     items = list(zip(tmp['documents'], tmp['metadatas'])) #rawdata를 page_content, metadata 형식으로 묶어주기
     items.sort(key = lambda x : x[1]['chunk_index'])
     docs = [Document(page_content = c, metadata = m) for c,m in items]

@@ -80,7 +80,7 @@ toc_structure = toc_llm.with_structured_output(Outline)
 toc_chain = toc_prompt | toc_structure
 
 #개발 중 임시 저장 용
-toc_cache = "toc_cache.json"
+toc_cache = "/Users/amy.kim/Documents/GitHub/KTB4-amy-AI/personal_project/toc_cache.json"
 res = None
 
 if os.path.exists(toc_cache):
@@ -129,6 +129,10 @@ splitter = RecursiveCharacterTextSplitter(
     chunk_size = CHUNK_SIZE,
     chunk_overlap = CHUNK_OVERLAP,
 )
+
+print("=== cleaned_docs:", len(cleaned_docs))
+print("=== docs:", len(docs))
+
 chunks = splitter.split_documents(docs)
 
 #청킹 인덱싱 해주기
