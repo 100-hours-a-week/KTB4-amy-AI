@@ -5,10 +5,12 @@ from langchain_core.output_parsers import StrOutputParser
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import StateGraph, START, END
 from langgraph.types import interrupt
+from pydantic import BaseModel
 from typing_extensions import TypedDict
-from typing import List
+from typing import List, Literal
 from langchain_core.documents import Document
 from personal_project.baseline import retriever, prompt, llm, vectorstore
+from personal_project.graph_chapter import to_yn
 from personal_project.prompt import prompt_replace
 
 
@@ -62,11 +64,14 @@ def router(state : MyState) -> str:
     return "learn"
 
 def ask(state : MyState) -> dict:
-  tmp = interrupt({"stage" : "websearch", "msg" : "문서에서 내용을 찾을 수 없습니다. 웹 검색으로 전환할까요? (네/아니요)"})
-  if "아니요" in tmp:
+  tmp = interrupt({"stage" : "websearch", "msg" : "문서에서 내용을 찾을 수 없습니다. 웹 검색으로 전환할까요?"})
+  res = to_yn(tmp)
+
+  if res == 'N':
     check = "doc"
   else:
     check = "web"
+
   return {"check" : check}
 
 def ask_router(state : MyState) -> str:
