@@ -1,8 +1,11 @@
 # fastapi 입력
+import os
+import tempfile
 import uuid
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile
 from pydantic import BaseModel
 
+from personal_project import baseline
 from personal_project.graph import graph
 from langgraph.types import Command
 
@@ -26,21 +29,32 @@ class ResumeRequest(BaseModel):
     reply : str
 
 def build_response(result, thread_id) -> AskResponse:
+    v = result["__interrupt__"][0].value
     if "__interrupt__" in result:
-        v = result["__interrupt__"][0].value #보통 결과가 복수일것을 생각해서 리스트로 받아오나 여기선 단일이므로 0번째 값을 받아옴
-        return  AskResponse(status="interrupted", thread_id=thread_id,
-                            stage=v["stage"], msg=v["msg"], answer=result["answer"])
+        return AskResponse(status="interrupted", thread_id=thread_id,
+                           stage=v.get("stage"), msg=v.get("msg"),
+                           answer=(v.get("answer") or result.get("answer")))
     return AskResponse(status="completed", thread_id=thread_id,
-                       answer=result["answer"])
+                       answer=(v.get("answer") or result.get("answer")))
 
 @app.get("/")
 def root():
   return {"status" : "ok", "message" : "connect"}
 
+@app.post("/upload")
+def upload(file : UploadFile):
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+        tmp.write(file.file.read())
+        tmp_fath = tmp.name
+    try:
+        baseline.build_vectorstore(tmp_fath)
+    finally:
+        os.remove(tmp_fath)
+
 @app.post("/ask", response_model=AskResponse)
 def ask(req: AskRequest):
     thread_id = req.thread_id or str(uuid.uuid4())
-    result = graph_chapter.invoke({"question" : req.question},
+    result = graph_chapter.invoke({"cont" : req.question},
                           config = {"configurable" : {"thread_id" : thread_id}})
 
     return build_response(result, thread_id)

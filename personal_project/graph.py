@@ -2,15 +2,19 @@
 #import
 from duckduckgo_search import DDGS
 from langchain_core.output_parsers import StrOutputParser
+import sqlite3
+
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import StateGraph, START, END
 from langgraph.types import interrupt
 from typing_extensions import TypedDict
 from typing import List
 from langchain_core.documents import Document
-from personal_project.baseline import retriever, prompt, llm, vectorstore
-from personal_project.prompt import prompt_replace
-
+from personal_project import baseline
+from personal_project.baseline import llm
+from personal_project.classifiers import to_yn
+from personal_project.prompt import prompt_replace, prompt
 
 class MyState(TypedDict): #typeddict == 형식지정
   question : str
@@ -30,7 +34,7 @@ def initialize(state : MyState) -> dict:
 #점수 꺼내서 메타 데이터에 넣기
 def search(state: MyState) -> dict:
   print(state['search_query'])
-  res = vectorstore.similarity_search_with_score(state['search_query'], k=3)
+  res = baseline.vectorstore.similarity_search_with_score(state['search_query'], k=3)
   doc_list = []
   for doc, score in res:
     doc.metadata['score'] = score
@@ -62,11 +66,14 @@ def router(state : MyState) -> str:
     return "learn"
 
 def ask(state : MyState) -> dict:
-  tmp = interrupt({"stage" : "websearch", "msg" : "문서에서 내용을 찾을 수 없습니다. 웹 검색으로 전환할까요? (네/아니요)"})
-  if "아니요" in tmp:
+  tmp = interrupt({"stage" : "websearch", "msg" : "문서에서 내용을 찾을 수 없습니다. 웹 검색으로 전환할까요?"})
+  res = to_yn(tmp)
+
+  if res == 'N':
     check = "doc"
   else:
     check = "web"
+
   return {"check" : check}
 
 def ask_router(state : MyState) -> str:

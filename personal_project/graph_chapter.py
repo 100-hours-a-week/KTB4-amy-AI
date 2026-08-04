@@ -1,16 +1,22 @@
-from langchain_core.documents import Document
+import os
+import sqlite3
+
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.sqlite import SqliteSaver
+from personal_project import baseline
+TOP_K = int(os.environ.get("TOP_K"))
+from langchain_anthropic import ChatAnthropic
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
-from langgraph.checkpoint.memory import MemorySaver
 from langgraph.constants import START, END
 from langgraph.graph import StateGraph
 from langgraph.types import interrupt
 from pydantic import BaseModel
 from typing_extensions import TypedDict
-
-from personal_project.baseline import retriever, llm, vectorstore, chapter_count
+from personal_project.baseline import llm
+from personal_project.classifiers import classify_unclear, to_yn
 from personal_project.graph import builder as qa_builder
-from personal_project.prompt import chapter_prompt, lecture_prompt
+from personal_project.prompt import chapter_prompt, lecture_prompt, clarify_prompt
 
 class Index(BaseModel):
     parent_index : int
@@ -24,6 +30,15 @@ class ChapterState(TypedDict):
     answer : str
     cont : str
     cursor : int
+    check_state : str
+
+#llm 만들어주기
+model_key = os.environ.get("claude_api_key")
+model_name = os.environ.get("MODEL_C")
+
+lecture_llm = ChatAnthropic(model=model_name, api_key=model_key, max_retries=0)
+lecture_chain = (lecture_prompt | lecture_llm | StrOutputParser())
+clarify_chain = clarify_prompt | llm | StrOutputParser()
 
 def format_with_index(docs):
     return "\n\n".join(
@@ -32,6 +47,7 @@ def format_with_index(docs):
     )
 
 def returnChapter(state : ChapterState):
+    retriever = baseline.vectorstore.as_retriever(search_kwargs={"k": TOP_K})
     chapter_structure = llm.with_structured_output(Index)
     chapter_chain = ( {'context' : retriever | format_with_index, 'question' : RunnablePassthrough()}
             | chapter_prompt | chapter_structure)
@@ -45,21 +61,23 @@ def textChapter(state : ChapterState):
     ch = state['chapter_index']
     print(f"=== textChapter 조회: parent_index={pr}, chapter_index={ch}")
 
-    tmp = vectorstore.get(where={"$and" : [ #연산자 시퀄문용 $ == chroma 연산자
+    tmp = baseline.vectorstore.get(where={"$and" : [ #연산자 시퀄문용 $ == chroma 연산자
         {"parent_index" : pr},
         {"chapter_index" : ch},
     ]})
-    print(f"=== 조회 결과 청크 수: {len(tmp['documents'])}")
 
     items = list(zip(tmp['documents'], tmp['metadatas'])) #rawdata를 page_content, metadata 형식으로 묶어주기
     items.sort(key = lambda x : x[1]['chunk_index'])
-    docs = [Document(page_content = c, metadata = m) for c,m in items]
-    return {'text' : docs, 'cursor' : 0} #청크 인덱싱 초기화용
+    context = " ".join(c for c,m in items) #순서에 맞춰 청킹된 텍스트들 합쳐주기
+
+    #챕터 통째로 랭체인에 넣어주기
+    answer = lecture_chain.invoke({'context' : context})
+    result = [p.strip() for p in answer.split('---') if p.strip()]
+
+    return {'text' : result, 'cursor' : 0}
 
 def printChapter(state : ChapterState):
-    string = state['text'][state['cursor']]
-    lecture_chain = (lecture_prompt | llm | StrOutputParser())
-    answer = lecture_chain.invoke({'context' : string.page_content})
+    answer = state['text'][state['cursor']]
     return {'answer' : answer}
 
 def ask(state : ChapterState):
@@ -73,7 +91,7 @@ def nextChapter(state : ChapterState):
     p = state['parent_index']
     c = state['chapter_index']
 
-    if c < chapter_count[p]:
+    if c < baseline.chapter_count[p]:
         return {'chapter_index' : c + 1}
     else:
         return {'parent_index' : p + 1, 'chapter_index' : 1}
@@ -89,6 +107,11 @@ def moreQuestion(state : ChapterState):
 def done(state : ChapterState):
     return {'answer' : "문서에 대한 설명을 끝마쳤습니다"}
 
+def clarify(state : ChapterState):
+    response = clarify_chain.invoke({"text" : state['cont']})
+    reply = interrupt({"stage": "clarify", "answer" : response, "msg" : ""})
+    return {"cont" : reply}
+
 def advance(state: ChapterState) -> str:
     #청크 잔여 여부
     if state['cursor'] + 1 < len(state['text']):
@@ -97,35 +120,54 @@ def advance(state: ChapterState) -> str:
     p = state['parent_index']
     c = state['chapter_index']
 
-    if p >= max(chapter_count) and c >= chapter_count[p]:
+    if p >= max(baseline.chapter_count) and c >= baseline.chapter_count[p]:
         return 'done'
 
     return 'nextChapter'
+
+def routeNode(state):
+    res = classify_unclear(state['cont'])
+    return {'question': state['cont'], 'check_state' : res}
+
+def routeEdge(state) -> str:
+    tmp = state['check_state']
+    if tmp == 'chapter':
+        return 'returnChapter'
+    elif tmp == 'question':
+        return 'qa'
+    else:
+        return 'clarify'
 
 def clearAnswer(state : ChapterState):
     return {'answer' : "질문이 있으신가요?"}
 
 #질의응답 여부
 def after_ask(state : ChapterState) -> str:
-    if  state['cont'].strip().upper().startswith('N'):
+    res = to_yn(state['cont'])
+
+    if  res == 'N':
         return 'qa'
-    elif state['cont'].strip().startswith('아니'):
-        return 'qa'
+    elif res == 'unclear':
+        return 'routeNode'
+
     return advance(state)
 
 #추가질문 여부
 def after_more(state : ChapterState) -> str:
-    if state['cont'].strip().upper().startswith('N'):
-        return advance(state)
-    elif state['cont'].strip().startswith('아니'):
-        return advance(state)
-    return 'again'
+    res = to_yn(state['cont'])
 
+    if res == 'Y':
+        return 'again'
+    elif res == 'unclear':
+        return 'routeNode'
+
+    return advance(state)
 
 # -- 그래프 엣지 --
 qa_graph = qa_builder.compile() # 서브그래프용으로 체크포인터가 없는 그래프 빌드 (부모 그래프가 체크포인터가 있어 터진다!!)
 
 builder_chapter = StateGraph(ChapterState)
+builder_chapter.add_node('routeNode', routeNode)
 builder_chapter.add_node('returnChapter', returnChapter)
 builder_chapter.add_node('textChapter', textChapter)
 builder_chapter.add_node('printChapter', printChapter)
@@ -137,8 +179,17 @@ builder_chapter.add_node('moreQuestion', moreQuestion)
 builder_chapter.add_node('done', done)
 builder_chapter.add_node('qa', qa_graph) #서브그래프노드
 builder_chapter.add_node('clearAnswer', clearAnswer)
+builder_chapter.add_node('clarify', clarify)
 
-builder_chapter.add_edge(START, 'returnChapter')
+builder_chapter.add_edge(START, 'routeNode')
+builder_chapter.add_conditional_edges(
+    "routeNode",
+    routeEdge,
+    {
+        'qa' : 'qa',
+        'returnChapter' : 'returnChapter',
+        'clarify' : 'clarify'
+    })
 builder_chapter.add_edge('returnChapter', 'textChapter')
 builder_chapter.add_edge('textChapter', 'printChapter')
 builder_chapter.add_edge('printChapter', 'ask')
@@ -149,7 +200,10 @@ builder_chapter.add_conditional_edges(
         'qa' : 'clearAnswer',
         'next_chunk' : 'nextChunk',
         'nextChapter' : 'nextChapter',
-        'done' : 'done'
+        'done' : 'done',
+        'returnChapter' : 'returnChapter',
+        'clarify' : 'clarify',
+        'routeNode' : 'routeNode'
     }
 )
 builder_chapter.add_edge('clearAnswer', 'toQA')
@@ -158,6 +212,7 @@ builder_chapter.add_edge('nextChapter', 'textChapter')
 builder_chapter.add_edge('done', END)
 builder_chapter.add_edge('toQA', 'qa') #서브그래프 적용
 builder_chapter.add_edge('qa', 'moreQuestion')
+builder_chapter.add_edge('clarify', 'routeNode')
 builder_chapter.add_conditional_edges(
     'moreQuestion',
     after_more,
@@ -165,7 +220,10 @@ builder_chapter.add_conditional_edges(
         'again' : 'clearAnswer',
         'next_chunk' : 'nextChunk',
         'nextChapter' : 'nextChapter',
-        'done' : 'done'
+        'done' : 'done',
+        'returnChapter' : 'returnChapter',
+        'clarify': 'clarify',
+        'routeNode' : 'routeNode'
     }
 )
 

@@ -3,7 +3,7 @@ import os
 import re
 import unicodedata
 from pydantic import BaseModel, Field
-from personal_project.prompt import prompt, toc_prompt
+from personal_project.prompt import toc_prompt
 from dotenv import load_dotenv
 from collections import defaultdict
 from langchain_community.document_loaders import PyMuPDFLoader
@@ -12,8 +12,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.documents import Document
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnablePassthrough
+import hashlib
 
 load_dotenv()
 
@@ -32,7 +31,6 @@ CHUNK_SIZE = int(os.environ.get("CHUNK_SIZE"))
 CHUNK_OVERLAP = int(os.environ.get("CHUNK_OVERLAP"))
 DB = os.environ.get("DB")
 db2 = os.environ.get("db2")
-TOP_K = int(os.environ.get("TOP_K"))
 MODEL_NAME = os.environ.get("MODEL")
 
 os.environ["LANGSMITH_TRACING_V2"] = "true"
@@ -63,131 +61,110 @@ embeddings = HuggingFaceEmbeddings(
     query_encode_kwargs={"prompt": "query: ", "normalize_embeddings": True},
 )
 
-#문서 로드
-all_docs = []
-if os.path.exists(FILEPATH):
-    loader = PyMuPDFLoader(FILEPATH)
-    all_docs.extend(loader.load())
+# 청킹
+splitter = RecursiveCharacterTextSplitter(
+    chunk_size=CHUNK_SIZE,
+    chunk_overlap=CHUNK_OVERLAP,
+)
 
-#전처리 함수
+
+# 전처리 함수
 def preprocess_text(text):
-    text = unicodedata.normalize("NFKC", text) # 아니 특수문자 정규화해서 제거하려고 했는데 이걸로 \uf07d가 안없어짐!!!
-    text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f\xad]", "", text) #특수문자 제거용
-    text = re.sub(r"[ \t]+", " ", text) # 공백 통일용
-    text = re.sub(r"\n{3,}", "\n\n", text) #줄넘김 통일용
-    text = re.sub(r"[\uE000-\uF8FF]", "", text) #그래서 이걸로 없애줬어요
+    text = unicodedata.normalize("NFKC", text)  # 아니 특수문자 정규화해서 제거하려고 했는데 이걸로 \uf07d가 안없어짐!!!
+    text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f\xad]", "", text)  # 특수문자 제거용
+    text = re.sub(r"[ \t]+", " ", text)  # 공백 통일용
+    text = re.sub(r"\n{3,}", "\n\n", text)  # 줄넘김 통일용
+    text = re.sub(r"[\uE000-\uF8FF]", "", text)  # 그래서 이걸로 없애줬어요
     return text.strip()
 
-#문서 로드 및 전처리
-cleaned_docs = []
-for i in all_docs:
-    text = i.page_content
+def build_vectorstore(pdf_path):
+    global vectorstore, chapter_count
+    # 서브챕터 - 랭체인
+    toc_structure = llm.with_structured_output(Outline)
+    toc_chain = toc_prompt | toc_structure
 
-    if text:
-        text = preprocess_text(text)
-        cleaned_docs.append(text)
+    # 개발 중 임시 저장 용
 
-#서브챕터 - 랭체인
-toc_structure = llm.with_structured_output(Outline)
-toc_chain = toc_prompt | toc_structure
+    with open(pdf_path, 'rb') as f:
+        file_hash = hashlib.md5(f.read()).hexdigest()
+    db_path = os.path.join(DB, file_hash)
+    res = None
 
-#개발 중 임시 저장 용
-toc_cache = "/Users/amy.kim/Documents/GitHub/KTB4-amy-AI/personal_project/toc_cache.json"
-res = None
+    if os.path.exists(db_path):
+        vectorstore = Chroma(persist_directory=db_path, embedding_function=embeddings)
+        all_data = vectorstore.get()
+        chapter_count = {}
 
-if os.path.exists(toc_cache):
-    try:
-        with open(toc_cache, encoding="utf-8") as f:
-            res = Outline.model_validate_json(f.read())
-    except:
-        res = None
-if res == None:
-    numbered = "\n\n".join(f"[{i}] {t}" for i, t in enumerate(cleaned_docs))
-    res = toc_chain.invoke({"toc_list": numbered})
-    with open(toc_cache, "w", encoding="utf-8") as f:
-        f.write(res.model_dump_json(indent=2)) #indent : 들여쓰기
+        for m in all_data['metadatas']:
+            p, c = m['parent_index'], m['chapter_index']
+            chapter_count[p] = max(chapter_count.get(p, 0), c)
 
-chapter_num = 1
-parent_num = 0
-
-docs = []
-tmp = 0
-
-for ch in res.chapters:
-    level = ch.level
-    title = ch.title
-    start_index = ch.start_index
-    last_index = ch.last_index
-    parent = ch.parent
-
-    if level == 1:
-        chapter_num = 1
-        parent_num += 1
+        return
     else:
-        for i in range(start_index, last_index + 1, 1):
-            doc = Document(page_content=cleaned_docs[i], metadata = {'title' : title, 'level' : level,  'parent' : parent, 'chapter_index' : chapter_num, 'parent_index' : parent_num})
-            docs.append(doc)
-        chapter_num += 1
+        # 문서 로드
+        all_docs = []
+        if os.path.exists(pdf_path):
+            loader = PyMuPDFLoader(pdf_path)
+            all_docs.extend(loader.load())
 
-#챕터 카운트용
-chapter_count = {}
-for d in docs:
-    p = d.metadata['parent_index']
-    c = d.metadata['chapter_index']
-    chapter_count[p] = max(chapter_count.get(p,0), c)
+        # 문서 로드 및 전처리
+        cleaned_docs = []
+        for i in all_docs:
+            text = i.page_content
 
-#청킹
-splitter = RecursiveCharacterTextSplitter(
-    chunk_size = CHUNK_SIZE,
-    chunk_overlap = CHUNK_OVERLAP,
-)
+            if text:
+                text = preprocess_text(text)
+                cleaned_docs.append(text)
 
-print("=== cleaned_docs:", len(cleaned_docs))
-print("=== docs:", len(docs))
+        numbered = "\n\n".join(f"[{i}] {t}" for i, t in enumerate(cleaned_docs))
+        res = toc_chain.invoke({"toc_list": numbered})
 
-chunks = splitter.split_documents(docs)
+        chapter_num = 1
+        parent_num = 0
 
-#청킹 인덱싱 해주기
-seq = defaultdict(int)#없는 키를 불러내면 0을 자동 초기화해줌
-for c in chunks:
-    key = (c.metadata['parent_index'], c.metadata['chapter_index'])
-    c.metadata['chunk_index'] = seq[key]
-    seq[key] += 1
+        docs = []
 
-print(f"청킹 데이터 : {chunks[0]}...")
+        for ch in res.chapters:
+            level = ch.level
+            title = ch.title
+            start_index = ch.start_index
+            last_index = ch.last_index
+            parent = ch.parent
 
-#db
-#NOTE : db가 없을때만 생성되도록
-
-if (os.path.exists(DB)) != True:
-  vectorstore = Chroma.from_documents(
-    documents=chunks,
-    embedding=embeddings,
-    persist_directory=DB,
-  )
-  print("인덱싱 완료. Chroma 저장 위치:", DB)
-else: #벡터디비가 이미 존재하면 호출을 해주도록 하자
-  vectorstore = Chroma(
-      persist_directory = DB,
-      embedding_function = embeddings
-  )
-
-#RAG 체인
-#HACK : 왜인지는 모르겠는데 llm이 성공적으로 호출되어도 계속 호출하는 현상이 있어서 최대 호출횟수 지정해서 해결 하였음
-#NOTE : 아니 근데 출력 결과 너무 맘에 안드는데 맘에 드는 결과 나올때까지 작성하자니 프롬프트 너무 길어질것 같고
-retriever = vectorstore.as_retriever(search_kwargs={"k": TOP_K})
-
-def format_docs(docs):
-    return "\n\n".join(d.page_content for d in docs)
-
-rag_chain = (
-    {"context": retriever | format_docs, "question": RunnablePassthrough()}
-    | prompt
-    | llm
-    | StrOutputParser()
-)
+            if level == 1:
+                chapter_num = 1
+                parent_num += 1
+            else:
+                for i in range(start_index, last_index + 1, 1):
+                    doc = Document(page_content=cleaned_docs[i],
+                                   metadata={'title': title, 'level': level, 'parent': parent, 'chapter_index': chapter_num,
+                                             'parent_index': parent_num})
+                    docs.append(doc)
+                chapter_num += 1
 
 
+    # 챕터 카운트용
+    chapter_count = {}
+    for d in docs:
+        p = d.metadata['parent_index']
+        c = d.metadata['chapter_index']
+        chapter_count[p] = max(chapter_count.get(p, 0), c)
+
+    print("=== cleaned_docs:", len(cleaned_docs))
+    print("=== docs:", len(docs))
+
+    chunks = splitter.split_documents(docs)
+
+    # 청킹 인덱싱 해주기
+    seq = defaultdict(int)  # 없는 키를 불러내면 0을 자동 초기화해줌
+    for c in chunks:
+        key = (c.metadata['parent_index'], c.metadata['chapter_index'])
+        c.metadata['chunk_index'] = seq[key]
+        seq[key] += 1
+
+    print(f"청킹 데이터 : {chunks[0]}...")
+
+    vectorstore = Chroma.from_documents(documents=chunks, embedding=embeddings, persist_directory=db_path)
 # #테스트
 # test_q = "니체가 말하는 삶이 뭐야?"
 # print("Q:", test_q)
