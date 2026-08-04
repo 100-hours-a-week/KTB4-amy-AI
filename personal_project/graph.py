@@ -2,17 +2,19 @@
 #import
 from duckduckgo_search import DDGS
 from langchain_core.output_parsers import StrOutputParser
+import sqlite3
+
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import StateGraph, START, END
 from langgraph.types import interrupt
-from pydantic import BaseModel
 from typing_extensions import TypedDict
-from typing import List, Literal
+from typing import List
 from langchain_core.documents import Document
-from personal_project.baseline import retriever, prompt, llm, vectorstore
-from personal_project.graph_chapter import to_yn
-from personal_project.prompt import prompt_replace
-
+from personal_project import baseline
+from personal_project.baseline import llm
+from personal_project.classifiers import to_yn
+from personal_project.prompt import prompt_replace, prompt
 
 class MyState(TypedDict): #typeddict == 형식지정
   question : str
@@ -32,7 +34,7 @@ def initialize(state : MyState) -> dict:
 #점수 꺼내서 메타 데이터에 넣기
 def search(state: MyState) -> dict:
   print(state['search_query'])
-  res = vectorstore.similarity_search_with_score(state['search_query'], k=3)
+  res = baseline.vectorstore.similarity_search_with_score(state['search_query'], k=3)
   doc_list = []
   for doc, score in res:
     doc.metadata['score'] = score
