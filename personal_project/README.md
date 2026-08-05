@@ -10,11 +10,12 @@ pdf 문서를 업로드 하면 챕터 단위로 순차 설명 및 질의응답 �
 ## Quick Start
 
 ### Prerequisites
-- Python 3.13+
-- Node.js 18+
+- Python 3.13+ / [uv](https://docs.astral.sh/uv/)
+- Node.js 20+
 - Gemini API 키, Anthropic(Claude) API 키
 
 ### 환경 변수
+이 폴더(`personal_project/`)에 `.env` 파일을 만듭니다.
 ```
 google_api_key=...
 google_api_key2=...        # 폴백용 (선택)
@@ -26,25 +27,26 @@ DB=/절대경로/chroma_db
 CHUNK_SIZE=...
 CHUNK_OVERLAP=...
 TOP_K=...
+HOST=http://localhost:5173  # 프론트엔드 origin (CORS 허용용)
 ```
 
 ### Installation
- 
+
 ```bash
-# 백엔드
-pip install -r requirements.txt
- 
+# 백엔드 (이 폴더에서: personal_project/)
+uv sync
+
 # 프론트엔드
 cd frontend
 npm install
 ```
 
 ### Run
- 
+
 ```bash
-# 백엔드 (리포 루트에서)
-uvicorn personal_project.main:app --reload
- 
+# 백엔드 (이 폴더에서: personal_project/)
+uv run uvicorn main:app --reload
+
 # 프론트엔드
 cd frontend
 npm run dev
@@ -61,24 +63,39 @@ npm run dev
 ![img](./frontend/img/DocentAI3.png)
 
 ## Architecture
- 
+
+```mermaid
+---
+config:
+  layout: dagre
+---
+flowchart TB
+ subgraph s1["graph.py[QA그래프]"]
+        n1["initialize"] --> n2["search"]
+        n2 --> n3["evaluate"]
+        n3 -- ok --> n4["learn"]
+        n3 -- 조건 충족 실패 --> n5["ask"]
+        n5 -- N --> retry
+        n5 -- Y --> web_search
+        retry --> n2
+        web_search --> n4
+  end
+    A["React 프론트"] -- "/upload · /ask · /resume" --> B("FastAPI")
+    B --> G["LangGraph\n순차 교육 그래프"]
+    G --> C{"routeNode\n의도 분류"}
+    C -- chapter --> D["returnChapter"]
+    C -- question --> s1
+    C -- clarify --> F["응대 생성"]
+    D --> D_1["textChapter"]
+    D_1 --> D_2["printChapter"]
+    D_2 --> D_3["ask"]
+    F -- 재분류 --> C
+    D_3 -- Y, 이어서 --> D_2
+    D_3 -- 챕터 전환시 --> D_1
+    D_3 -- N --> s1
+    s1 -- 출력 이어서 --> D_2
 ```
-[React 프론트]
-      │  /upload · /ask · /resume
-      ▼
-[FastAPI]
-      │
-      ▼
-[LangGraph — 순차 교육 그래프]
-   routeNode(의도 분류)
-      ├─ chapter ─→ returnChapter → textChapter → printChapter → ask
-      ├─ question ─→ QA 서브그래프
-      └─ clarify ─→ 응대 생성 → 재분류
- 
-   [QA 서브그래프 — Corrective RAG]
-   initialize → search → evaluate → (충분? learn / 부족? ask·retry·web_search)
-```
- 
+
 ### 기술 스택
  
 | 구분 | 사용 기술 |

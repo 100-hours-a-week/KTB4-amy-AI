@@ -5,7 +5,7 @@ function App() {
   return (
     <div className="app-shell">
       <header className="app-header">
-        <h1>학습 보조 AI</h1>
+        <h1>Docent AI</h1>
       </header>
       <main className="app-main">
         <NotebookWorkspace />

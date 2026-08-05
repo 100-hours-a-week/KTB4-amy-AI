@@ -4,6 +4,9 @@ import tempfile
 import uuid
 
 from dotenv import load_dotenv
+
+load_dotenv()
+
 from fastapi import FastAPI, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -12,8 +15,6 @@ from langgraph.types import Command
 from personal_project.graph_chapter import graph_chapter
 
 host = os.environ.get("HOST")
-
-load_dotenv()
 
 app = FastAPI(title="강의자료 검색")
 
