@@ -77,7 +77,8 @@ flowchart TB
         n3 -- 조건 충족 실패 --> n5["ask"]
         n5 -- N --> retry
         n5 -- Y --> web_search
-        retry --> n2
+        retry -- 3회 이상 실패시 --> web_search
+        retry -- 성공시 --> n3
         web_search --> n4
   end
     A["React 프론트"] -- "/upload · /ask · /resume" --> B("FastAPI")
@@ -90,9 +91,9 @@ flowchart TB
     D_1 --> D_2["printChapter"]
     D_2 --> D_3["ask"]
     F -- 재분류 --> C
-    D_3 -- Y, 이어서 --> D_2
-    D_3 -- 챕터 전환시 --> D_1
+    D_3 -- Y --> D_2
     D_3 -- N --> s1
+    D_2 -- 챕터 분할 출력 완료 --> D_1
     s1 -- 출력 이어서 --> D_2
 ```
 
