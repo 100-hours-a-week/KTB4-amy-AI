@@ -2,16 +2,28 @@
 import os
 import tempfile
 import uuid
+
+from dotenv import load_dotenv
 from fastapi import FastAPI, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-
 from personal_project import baseline
-from personal_project.graph import graph
 from langgraph.types import Command
-
 from personal_project.graph_chapter import graph_chapter
 
+host = os.environ.get("HOST")
+
+load_dotenv()
+
 app = FastAPI(title="강의자료 검색")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[host],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class AskRequest(BaseModel):
     question: str
@@ -50,6 +62,7 @@ def upload(file : UploadFile):
         baseline.build_vectorstore(tmp_fath)
     finally:
         os.remove(tmp_fath)
+    return {"filename": file.filename}
 
 @app.post("/ask", response_model=AskResponse)
 def ask(req: AskRequest):
@@ -64,8 +77,10 @@ def resume(req : ResumeRequest):
     thread_id = req.thread_id
     result = graph_chapter.invoke(Command(resume = req.reply),
                           config = {"configurable" : {"thread_id" : thread_id}})
+    response = build_response(result, thread_id)
+    print("=== resume 응답:", response)  # ← 이 줄 추가
 
-    return build_response(result, thread_id)
+    return response
 
 if __name__ == "__main__":
     import uvicorn

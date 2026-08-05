@@ -4,7 +4,6 @@ import re
 import unicodedata
 from pydantic import BaseModel, Field
 from personal_project.prompt import toc_prompt
-from dotenv import load_dotenv
 from collections import defaultdict
 from langchain_community.document_loaders import PyMuPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -13,8 +12,6 @@ from langchain_community.vectorstores import Chroma
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.documents import Document
 import hashlib
-
-load_dotenv()
 
 #llm api keys
 API_KEYS = [

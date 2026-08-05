@@ -97,7 +97,7 @@ def nextChapter(state : ChapterState):
         return {'parent_index' : p + 1, 'chapter_index' : 1}
 
 def toQA(state : ChapterState):
-    new_question = interrupt({"stage" : "question", "msg" : "질문 여부 체크"})
+    new_question = interrupt({"stage" : "question", "msg" : "질문이 있으신가요?"})
     return {"question" : new_question}
 
 def moreQuestion(state : ChapterState):
@@ -139,7 +139,7 @@ def routeEdge(state) -> str:
         return 'clarify'
 
 def clearAnswer(state : ChapterState):
-    return {'answer' : "질문이 있으신가요?"}
+    return {'answer' : ""}
 
 #질의응답 여부
 def after_ask(state : ChapterState) -> str:

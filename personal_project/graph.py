@@ -1,11 +1,8 @@
 # 랭그래프 마이그레이션
 #import
-from duckduckgo_search import DDGS
+from ddgs import DDGS
 from langchain_core.output_parsers import StrOutputParser
-import sqlite3
-
 from langgraph.checkpoint.memory import MemorySaver
-from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import StateGraph, START, END
 from langgraph.types import interrupt
 from typing_extensions import TypedDict
@@ -55,7 +52,7 @@ def evaluate(state : MyState) -> dict:
 #분기 - 오류 여부 판단
 def router(state : MyState) -> str:
   print(state['retry_count'])
-  if state['retry_count'] < 2 and state['similarity_average'] >= 0.3: # 거리인거 까먹지 말기!!! 부등호 방향 반대될뻔...
+  if state['retry_count'] < 2 and state['similarity_average'] >= 0.35: # 거리인거 까먹지 말기!!! 부등호 방향 반대될뻔...
     if state['retry_count'] == 0:
       return "ask"
     else:
@@ -87,6 +84,7 @@ def ask_router(state : MyState) -> str:
 #덮어쓰기가 되니까 변수에 내용 혼용으로 들어가는건 걱정 안해도 될듯
 def web_search(state : MyState) -> dict:
   tmp = DDGS().text(state['search_query'], max_results = 3)
+  print(tmp)
   web_list = []
   for doc in tmp:
     web_list.append(Document(page_content=doc['body'], metadata = {"title" : doc['title'], "href" : doc['href']}))
@@ -102,10 +100,15 @@ def retry(state : MyState) -> dict:
   #res = "\n\n".join(doc.page_content for doc in state['context']), 컴프리헨션 써서 간략화한 코드 대괄호를 빼는경우 제네레이터가 되므로 바로바로 join 시킬 수 있어 리스트화 해서 넘겨주는것보다 효율적
   return {"retry_count" : state['retry_count'] + 1, "search_query" : make_answer_chain.invoke({"result" : res, "question" : state['question'], "search_query" : state['search_query']})}
 
+def format_docs(docs):
+  return "\n\n".join(d.page_content for d in docs)
+
 #들어온 문서 프롬프트에 맞게 가공해서 answer 에 보내주기
 def learn(state: MyState) -> dict:
-  learn_chain = (prompt | llm | StrOutputParser()) # 기존 랭체인은 생성과 검색 기능이 함께 있었기에 생성용 랭체인 선언
-  return {"answer" : learn_chain.invoke({"context": state['context'], "question": state['question']})} #내용을 프롬프트에 넣어서 적합한 정답 추출
+  print("=== learn context:", state['context'])
+  learn_chain = (prompt | llm | StrOutputParser())# 기존 랭체인은 생성과 검색 기능이 함께 있었기에 생성용 랭체인 선언
+  context_text = format_docs(state['context'])
+  return {"answer" : learn_chain.invoke({"context": context_text, "question": state['question']})} #내용을 프롬프트에 넣어서 적합한 정답 추출
 
 def fail(state : MyState) -> dict:
   return {"answer" : "문서에서 찾을 수 없습니다"}
@@ -137,6 +140,6 @@ builder.add_conditional_edges(
 builder.add_edge("retry", "search")
 builder.add_edge("web_search", "learn")
 builder.add_edge("learn", END)
-builder.add_edge("fail", END)
+builder.add_edge("fail", "web_search")
 
 graph = builder.compile(checkpointer= MemorySaver())
