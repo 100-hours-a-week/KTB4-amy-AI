@@ -1,4 +1,5 @@
 import './App.css'
+import ApiKeyGate from './components/ApiKeyGate'
 import NotebookWorkspace from './components/NotebookWorkspace'
 
 function App() {
@@ -8,7 +9,9 @@ function App() {
         <h1>Docent AI</h1>
       </header>
       <main className="app-main">
-        <NotebookWorkspace />
+        <ApiKeyGate>
+          <NotebookWorkspace />
+        </ApiKeyGate>
       </main>
     </div>
   )

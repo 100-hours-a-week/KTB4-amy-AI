@@ -3,6 +3,8 @@ from personal_project.baseline import llm
 from pydantic import BaseModel
 from typing import Literal
 
+from personal_project.prompt import yn_prompt
+
 class ynModel(BaseModel):
     answer: Literal["Y", "N", "unclear"]
 
@@ -18,7 +20,8 @@ def to_yn(text):
         return 'N'
 
     yn_llm = llm.with_structured_output(ynModel)
-    result = yn_llm.invoke(text)
+    yn_chain = (yn_prompt | yn_llm)
+    result = yn_chain.invoke(text)
 
     return result.answer
 
