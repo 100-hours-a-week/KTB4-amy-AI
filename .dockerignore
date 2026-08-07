@@ -1,0 +1,12 @@
+.venv
+personal_project/chroma_db
+personal_project/.venv
+personal_project/회고
+personal_project/img
+.claude
+
+toc_cache.json
+personal_project/.env
+
+__pycache__/
+.git

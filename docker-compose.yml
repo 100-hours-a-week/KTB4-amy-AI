@@ -1,0 +1,12 @@
+services:
+  backend:
+    build: .
+    env_file:
+      - ./personal_project/.env
+
+  frontend:
+    build: ./personal_project/frontend  # ← 여기만 실제 프론트 폴더명으로
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
