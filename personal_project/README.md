@@ -33,6 +33,8 @@
 
 문서에서 답을 못 찾으면 지어내지 않고, **웹 검색으로 넘어갈지 사용자에게 먼저 확인**한다.
 
+[시연영상](https://drive.google.com/file/d/1C0nuewMMdddB2QxQHx7uYmFxIXOPlfeI/view?usp=sharing)
+
 ---
 
 ## Problem
